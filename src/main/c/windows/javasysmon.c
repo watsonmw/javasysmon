@@ -296,6 +296,35 @@ DWORD GetCommandLineUTF8(DWORD dwPid, char** utf8CommandLine, DWORD* process_com
 	return GetLastError();
 }
 
+DWORD DropPathFromProcessName(TCHAR* file_path, DWORD file_path_len) {
+    DWORD i = file_path_len;
+
+    if (!file_path || file_path_len == 0) {
+        return 0;
+    }
+
+    for (; i >= 0; --i) {
+        char c = file_path[i];
+        if (c == '\\' || c == '/') {
+            break;
+        }
+    }
+
+    if (i == 0) {
+        return file_path_len;
+    }
+
+    {
+        DWORD pos = i + 1;
+        DWORD len = file_path_len - pos;
+        for (i = 0; i < len; ++i) {
+            file_path[i] = file_path[i + pos];
+        }
+        file_path[i] = 0;
+        return len;
+    }
+}
+
 JNIEXPORT jobjectArray JNICALL Java_com_jezhumble_javasysmon_WindowsMonitor_processTable (JNIEnv *env, jobject object)
 {
 	jclass		process_info_class;
@@ -346,10 +375,10 @@ JNIEXPORT jobjectArray JNICALL Java_com_jezhumble_javasysmon_WindowsMonitor_proc
 	  }
 	  // if we can open the process (doesn't work for system idle process and CSRSS without elevated privileges)
           if (processes[i] != 0 && (process = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processes[i])) != NULL) {
-	    // get process name
-	    if (EnumProcessModules(process, &module, sizeof(module), &buffer_size)) {
-	      process_name_len = GetModuleBaseName(process, module, process_name, sizeof(process_name) / sizeof(TCHAR));
-	    }
+            // Get the process name.  We don't get the main module name because modules
+            // can be unloaded.  The process image file name does not change though.
+            process_name_len = GetProcessImageFileName(process, process_name, sizeof(process_name) / sizeof(TCHAR));
+            process_name_len = DropPathFromProcessName(process_name, process_name_len);
 	    // get command name and copy to memory on the stack
 		GetCommandLineUTF8(processes[i], &process_command_raw, &process_command_len);
 		if (process_command_raw) {
