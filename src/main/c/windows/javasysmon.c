@@ -297,7 +297,7 @@ DWORD GetCommandLineUTF8(DWORD dwPid, char** utf8CommandLine, DWORD* process_com
 }
 
 DWORD DropPathFromProcessName(TCHAR* file_path, DWORD file_path_len) {
-    DWORD i = file_path_len;
+    DWORD i = file_path_len - 1;
 
     if (!file_path || file_path_len == 0) {
         return 0;
@@ -310,7 +310,7 @@ DWORD DropPathFromProcessName(TCHAR* file_path, DWORD file_path_len) {
         }
     }
 
-    if (i == 0) {
+    if (i == -1) {
         return file_path_len;
     }
 
@@ -344,7 +344,6 @@ JNIEXPORT jobjectArray JNICALL Java_com_jezhumble_javasysmon_WindowsMonitor_proc
     FILETIME        created, exit, kernel, user;
     HANDLE          process, snapshot, token;
     PTOKEN_USER     user_token;
-	HMODULE         module;
 	PROCESS_MEMORY_COUNTERS pmc;
 	PROCESSENTRY32  process_entry;
 	SID_NAME_USE	sid_name_use;
